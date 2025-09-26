@@ -90,7 +90,8 @@ These variables provide essential inputs for:
  ```bash
  python -m pipeline.climate_pipeline
  ```
-By default, it selects the first N days of each year (configurable) and caps the total downloaded size (e.g. ~3 GB).  
+By default, it selects the first N days of each year (configurable) and caps the total downloaded size (e.g. ~3 GB).
+  
 4. Check results in HDFS
 ```bash
 hdfs dfs -ls /climate_data
