@@ -1,0 +1,14 @@
+# Core utilities
+requests==2.32.3
+pandas==2.2.3
+xarray==2024.7.0
+netCDF4==1.7.2
+
+# HDFS client
+hdfs==2.7.3
+
+# Airflow
+apache-airflow==2.10.2
+
+# Logging
+loguru==0.7.2
