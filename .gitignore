@@ -3,3 +3,4 @@ venv/
 *log
 pipeline.log
 processed_files.jsonl
+ClimateRecords/
