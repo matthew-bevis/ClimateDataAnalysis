@@ -31,9 +31,9 @@ These variables provide essential inputs for:
 
  - Filter datasets by geographic bounding box (e.g. Tampa Bay, Florida Everglades).
 
- - Transform NetCDF (.nc) files into line-delimited JSON records.
+ - Transform NetCDF (.nc) files into Parquet format (optimized for big data analytics).
 
- - Store results in HDFS for scalable analysis.
+ - Store results in Azure Data Lake Storage (ADLS) as blobs for scalable analysis.
 
  - Implement checkpointing to skip already-processed files.
 
@@ -41,12 +41,18 @@ These variables provide essential inputs for:
 
  - Log metrics on pipeline performance (files, rows, columns, runtime).
 
- ## Tech Stack
-  - Python (pandas, xarray, netCDF4) — data parsing and transformation
+ - Enable distributed data processing with Apache Spark and Azure Databricks.
 
- - HDFS — distributed storage of processed climate data
+ ## Tech Stack
+ - Python (pandas, xarray, netCDF4) — data parsing and transformation
+
+ - Azure Blob Storage / Data Lake — cloud storage for processed datasets
 
  - Apache Airflow — workflow orchestration (prototype DAG provided)
+
+ - Apache Spark (PySpark) - for task and query execution
+
+ - Azure DataBricks - Spark cluster environment for queries and analytics
 
  - Logging — pipeline logs (pipeline.log)
 
@@ -59,9 +65,9 @@ These variables provide essential inputs for:
  ClimateDataAnalysis/
 ├── acquisition/           # Data acquisition from NOAA S3
 │   └── data_acquisition.py
-├── transformation/        # Filtering & transformation of NetCDF
+├── transformation/        # Filtering & transformation of NetCDF to Parquet
 │   └── data_transformer.py
-├── storage/               # Upload to HDFS
+├── storage/               # Upload to Azure Data Lake Storage
 │   └── data_storage.py
 ├── pipeline/              # Orchestrator
 │   └── climate_pipeline.py
@@ -77,28 +83,34 @@ These variables provide essential inputs for:
  ```
 
  ## Setup
- 1. Install dependencies
+This Project runs from within a WSL2 instance with an installation of 
+ 1. Start your virtual environment
+ ```bash
+python -m venv venv
+ ```
+ 2. Install dependencies
  ```bash
  pip install -r requirements.txt
  ```
- 2. Start HDFS
+ 2. Configure Azure storage (via .env file)
  ```bash
- start-dfs.sh
- hdfs dfs -mkdir -p /climate_data
+AZURE_STORAGE_ACCOUNT=<your-account-name>
+AZURE_STORAGE_KEY=<your-storage-key>
+AZURE_BLOB_CONTAINER=<your-blob-container>
  ```
  3. Run the pipeline
  ```bash
- python -m pipeline.climate_pipeline
+ spark-submit ./pipeline/climate_pipeline.py
  ```
 By default, it selects the first N days of each year (configurable) and caps the total downloaded size (e.g. ~3 GB).
-  
-4. Check results in HDFS
+
+4. Check results in Azure Data Lake (example with Azure CLI)
 ```bash
-hdfs dfs -ls /climate_data
-hdfs dfs -ls /climate_data/1981
-hdfs dfs -cat /climate_data/1981/CR19810624.json | head -n 5
+az storage fs file list -f climate-data-analysis --account-name <your-account> --output table
 ```
 
 ## Next Steps
  - Expand data acquisition to reach a more substantial quantity. (~10 GB)
  - Perform exploratory data analysis on the vegetation stress trends.
+ - Run queries on the full dataset using Apache Spark on Databricks.
+ - Develop dashboards and visualizations of vegetation stress over time.

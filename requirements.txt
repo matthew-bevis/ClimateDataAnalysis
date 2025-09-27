@@ -4,10 +4,13 @@ pandas==2.2.3
 xarray==2024.7.0
 netCDF4==1.7.2
 
-# HDFS client
-hdfs==2.7.3
+# Big Data / Spark
+pyspark==3.5.7   # Apache Spark (PySpark API)
 
-# Airflow
+# Azure Storage
+azure-storage-blob==12.26.0   # Azure Blob Storage SDK
+
+# Workflow orchestration (Airflow prototype)
 apache-airflow==2.10.2
 
 # Logging
