@@ -21,4 +21,4 @@ yearly = (
       .orderBy("year")
 )
 
-display(yearly)  # Databricks will render a nice table/graph
+display(yearly)
