@@ -4,13 +4,28 @@
 # MAGIC This notebook queries the parquet files stored in ADLS and computes yearly averages.
 
 # COMMAND ----------
+import os
 from pyspark.sql import functions as F
 
-# Load from ADLS (replace with your account + container)
-df = spark.read.parquet(
-    "abfss://climate-data-analysis@datalakeq7aj6k0.dfs.core.windows.net/climate_data/*/*.parquet"
+# Pull environment variables
+storage_account = dbutils.secrets.get("climate-scope", "AZURE_STORAGE_ACCOUNT")
+container = dbutils.secrets.get("climate-scope", "AZURE_BLOB_CONTAINER")
+storage_key = dbutils.secrets.get("climate-scope", "AZURE_STORAGE_KEY")
+
+if not (storage_account and container and storage_key):
+    raise ValueError("Missing storage configuration. Ensure env vars or secrets are set.")
+
+# Configure Spark to authenticate with ADLS Gen2
+spark.conf.set(
+    f"fs.azure.account.key.{storage_account}.dfs.core.windows.net",
+    storage_key
 )
 
+# Build the path dynamically
+path = f"abfss://{container}@{storage_account}.dfs.core.windows.net/climate_data/*/*.parquet"
+
+# Load from ADLS
+df = spark.read.parquet(path)
 df.createOrReplaceTempView("climate")
 
 # COMMAND ----------
