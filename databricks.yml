@@ -1,0 +1,5 @@
+repos:
+  - path: /Repos/<your-username>/ClimateDataAnalysis
+    provider: github
+    url: https://github.com/matthew-bevis/ClimateDataAnalysis
+    branch: main
