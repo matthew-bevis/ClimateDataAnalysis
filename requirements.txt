@@ -3,6 +3,7 @@ requests==2.32.3
 pandas==2.2.3
 xarray==2024.7.0
 netCDF4==1.7.2
+matplotlib==3.10.7
 
 # Big Data / Spark
 pyspark==3.5.7   # Apache Spark (PySpark API)
