@@ -5,42 +5,96 @@ import xml.etree.ElementTree as ET
 import requests
 from utils.logger import get_logger
 
-NAMESPACE = "http://s3.amazonaws.com/doc/2006-03-01/"
+NAMESPACE = "http://s3.amazonaws.com/doc/2006-03-01/"  # kept for reference/logs
 
 
 class DataAcquisition:
     def __init__(self, base_url, output_dir):
-        self.base_url = base_url
+        self.base_url = base_url.rstrip("/")
         self.output_dir = output_dir
         self.logger = get_logger(self.__class__.__name__)
         os.makedirs(self.output_dir, exist_ok=True)
 
+    # ------------------------ internal helpers ------------------------
+
+    @staticmethod
+    def _strip_ns(tag: str) -> str:
+        """Return the local tag name without the '{ns}' prefix, if any."""
+        if "}" in tag:
+            return tag.split("}", 1)[1]
+        return tag
+
+    def _parse_listing_xml(self, xml_bytes):
+        """
+        Parse a single S3 ListBucketResult XML page, namespace-agnostic.
+        Returns (objects, next_token) where:
+          - objects: list of dicts {key,size,last_modified}
+          - next_token: str | None
+        """
+        try:
+            root = ET.fromstring(xml_bytes)
+        except ET.ParseError:
+            # Malformed XML — be tolerant and return empty page
+            return [], None
+
+        objs = []
+        next_token = None
+
+        # Find 'Contents' elements regardless of namespace
+        for elem in root.iter():
+            if self._strip_ns(elem.tag) != "Contents":
+                continue
+
+            key = size = last = None
+            for child in elem:
+                name = self._strip_ns(child.tag)
+                if name == "Key":
+                    key = (child.text or "").strip()
+                elif name == "Size":
+                    try:
+                        size = int((child.text or "0").strip())
+                    except ValueError:
+                        size = 0
+                elif name == "LastModified":
+                    last = (child.text or "").strip()
+
+            if key and key.lower().endswith(".nc"):
+                if "AVHRR-Land" in key or "VIIRS-Land" in key:
+                    objs.append({"key": key, "size": size or 0, "last_modified": last or ""})
+                else:
+                    self.logger.warning("Skipping .nc without AVHRR/VIIRS in key: %s", key)
+                    
+        # Find NextContinuationToken if present
+        for elem in root.iter():
+            if self._strip_ns(elem.tag) == "NextContinuationToken":
+                if elem.text:
+                    next_token = elem.text.strip() or None
+                break
+
+        return objs, next_token
+
     def _list_objects(self):
-        """Return list of dicts: {key, size, last_modified} for all NOAA .nc files we care about."""
+        """Return list of dicts: {key, size, last_modified} for relevant NOAA .nc files."""
         self.logger.info("Fetching file list from S3 with sizes")
         entries, token = [], None
+
         while True:
             url = f"{self.base_url}/?list-type=2&prefix=data/&max-keys=1000"
             if token:
                 url += f"&continuation-token={urllib.parse.quote(token)}"
-            resp = requests.get(url)
+
+            # HTTP fetch
+            resp = requests.get(url, timeout=30)
             resp.raise_for_status()
-            root = ET.fromstring(resp.content)
 
-            for c in root.findall(f".//{{{NAMESPACE}}}Contents"):
-                key = c.find(f"{{{NAMESPACE}}}Key").text
-                if not (key.endswith(".nc") and ("AVHRR-Land" in key or "VIIRS-Land" in key)):
-                    continue
-                size = int(c.find(f"{{{NAMESPACE}}}Size").text)
-                lm = c.find(f"{{{NAMESPACE}}}LastModified").text
-                entries.append({"key": key, "size": size, "last_modified": lm})
+            # Parse this page
+            page_objs, token = self._parse_listing_xml(resp.content)
+            entries.extend(page_objs)
 
-            nxt = root.find(f"{{{NAMESPACE}}}NextContinuationToken")
-            token = nxt.text if nxt is not None else None
             if not token:
                 break
 
-        self.logger.info(f"Total .nc candidates found: {len(entries)}")
+        self.logger.info("Total .nc candidates found: %d", len(entries))
         return entries
 
     def get_first_n_days_per_year_capped(
@@ -78,8 +132,11 @@ class DataAcquisition:
 
         gb = running / (1024**3)
         self.logger.info(
-            f"Planning {len(capped)} files across {per_year_days} days/year "
-            f"(cap {max_total_bytes/(1024**3):.1f} GB). Estimated: {gb:.2f} GB"
+            "Planning %d files across %d days/year (cap %.1f GB). Estimated: %.2f GB",
+            len(capped),
+            per_year_days,
+            max_total_bytes / (1024**3),
+            gb,
         )
         return capped
 
@@ -100,18 +157,19 @@ class DataAcquisition:
             nc_path = os.path.join(year_dir, filename)
 
             if os.path.exists(nc_path):
-                self.logger.info(f"Already have {nc_path}, skipping download.")
+                self.logger.info("Already have %s, skipping download.", nc_path)
                 return nc_path
 
-            self.logger.info(f"Downloading {url} → {nc_path}")
-            with requests.get(url, stream=True) as r:
+            self.logger.info("Downloading %s → %s", url, nc_path)
+            with requests.get(url, stream=True, timeout=60) as r:
                 r.raise_for_status()
                 with open(nc_path, "wb") as f:
                     for chunk in r.iter_content(1024 * 1024):
-                        f.write(chunk)
+                        if chunk:
+                            f.write(chunk)
 
             return nc_path
 
         except Exception as e:
-            self.logger.error(f"Failed to download {key}: {e}")
+            self.logger.error("Failed to download %s: %s", key, e)
             return None

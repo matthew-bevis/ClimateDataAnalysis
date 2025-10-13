@@ -16,3 +16,8 @@ apache-airflow==2.10.2
 
 # Logging
 loguru==0.7.2
+
+# Testing
+pytest==8.3.3
+pytest-cov==5.0.0
+freezegun==1.5.1
