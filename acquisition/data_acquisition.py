@@ -1,5 +1,7 @@
 import os
 import re
+import time
+import shutil
 import urllib.parse
 import xml.etree.ElementTree as ET
 import requests
@@ -140,36 +142,65 @@ class DataAcquisition:
         )
         return capped
 
-    def download(self, key):
+    def download(self, key, timeout=60):
         """
-        Download a .nc file from S3 into the local output dir and return the path.
+        Atomic, validated download:
+        - stream to <file>.part
+        - validate Content-Length (if present)
+        - rename to final path on success
+        - clean up .part on failure
         """
         try:
             url = f"{self.base_url}/{key}"
             filename = os.path.basename(key)
 
-            # Place into year-based folder
             m = re.search(r"(\d{8})", filename)
             year = m.group(1)[:4] if m else "unknown"
             year_dir = os.path.join(self.output_dir, year)
             os.makedirs(year_dir, exist_ok=True)
+            final_path = os.path.join(year_dir, filename)
+            part_path  = final_path + ".part"
 
-            nc_path = os.path.join(year_dir, filename)
+            if os.path.exists(final_path):
+                self.logger.info("Already have %s, skipping download.", final_path)
+                return final_path
 
-            if os.path.exists(nc_path):
-                self.logger.info("Already have %s, skipping download.", nc_path)
-                return nc_path
+            # remove any stale .part file from prior crashes
+            if os.path.exists(part_path):
+                try: os.remove(part_path)
+                except: pass
 
-            self.logger.info("Downloading %s → %s", url, nc_path)
-            with requests.get(url, stream=True, timeout=60) as r:
+            self.logger.info("Downloading %s → %s", url, final_path)
+            with requests.get(url, stream=True, timeout=timeout) as r:
                 r.raise_for_status()
-                with open(nc_path, "wb") as f:
+                expected = r.headers.get("Content-Length")
+                expected = int(expected) if expected and expected.isdigit() else None
+
+                # write to .part
+                with open(part_path, "wb") as f:
                     for chunk in r.iter_content(1024 * 1024):
                         if chunk:
                             f.write(chunk)
 
-            return nc_path
+            # validate size if server told us
+            if expected is not None:
+                actual = os.path.getsize(part_path)
+                if actual != expected:
+                    self.logger.error("Size mismatch for %s (got %d, expected %d). Cleaning up.",
+                                      filename, actual, expected)
+                    os.remove(part_path)
+                    return None
+
+            # atomic promote
+            shutil.move(part_path, final_path)
+            return final_path
 
         except Exception as e:
+            # best-effort cleanup
+            try:
+                if os.path.exists(part_path):
+                    os.remove(part_path)
+            except:
+                pass
             self.logger.error("Failed to download %s: %s", key, e)
             return None
