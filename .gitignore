@@ -11,3 +11,5 @@ databricks.yml
 .pytest_cache/
 coverage.xml
 .coverage
+htmlcov/
+tmp/
