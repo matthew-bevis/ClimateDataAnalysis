@@ -1,6 +1,5 @@
 import os
 import re
-import time
 import shutil
 import urllib.parse
 import xml.etree.ElementTree as ET

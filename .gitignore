@@ -5,3 +5,9 @@ pipeline.log
 processed_files.jsonl
 ClimateRecords/
 .env
+.databrickscfg
+databricks.yml
+.databricks/
+.pytest_cache/
+coverage.xml
+.coverage

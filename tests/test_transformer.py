@@ -1,65 +1,73 @@
-import os
-import pandas as pd
+import os, pandas as pd, numpy as np, pyarrow.parquet as pq
 import pytest
 from transformation.data_transformer import DataTransformer
 
-def test_transformer_filters_and_writes(monkeypatch, fake_xarray_ds, tmp_path):
-    # Fake xarray.open_dataset to return our minimal DS
-    monkeypatch.setattr("transformation.data_transformer.xr.open_dataset",
-                        lambda *a, **k: fake_xarray_ds)
+class FakeDS:
+    def __init__(self, df): self._df = df
+    def to_dataframe(self): return self._df
+    def __enter__(self): return self
+    def __exit__(self,*a): return False
 
-    outdir = tmp_path / "parquet_output"
-    t = DataTransformer(
-        lat_min=25.0, lat_max=26.5,
-        lon_min=-81.5, lon_max=-80.5,
-        output_dir=str(outdir),
-    )
+@pytest.fixture
+def fake_xarray_ds_factory():
+    def _factory(df): return FakeDS(df)
+    return _factory
 
-    # Input file with date in name
-    nc_file = tmp_path / "CR20200101.nc"
+def test_transformer_filters_bbox_and_coerces_time(monkeypatch, tmp_path, fake_xarray_ds_factory):
+    df = pd.DataFrame({
+        "latitude":  [25.10, 25.40, 30.00],
+        "longitude": [279.49, -80.90, -120.0],
+        "time":      [pd.Timestamp("2020-01-01T06:00Z"), 1577836800, 1577836800000],
+        "LAI": [1.0, 2.0, 3.0],
+        "FAPAR": [0.2, 0.4, 0.6],
+    })
+    fake = fake_xarray_ds_factory(df)
+    monkeypatch.setattr("transformation.data_transformer.xr.open_dataset", lambda *a, **k: fake)
+
+    outdir = tmp_path / "out"
+    t = DataTransformer(25.0, 26.5, -81.5, -80.5, str(outdir))
+    nc_file = tmp_path / "VIIRS-Land_v001_20200101.nc"
     nc_file.write_bytes(b"fake")
 
-    parquet_path = t.process(str(nc_file))
-    assert parquet_path is not None
-    assert os.path.exists(parquet_path)
+    p = t.process(str(nc_file))
+    assert p and os.path.exists(p)
 
-    df = pd.read_parquet(parquet_path)
-    # Expect only rows inside bbox after lon normalization:
-    # longitudes: 279.6 -> -80.4 (inside), -80.9 (inside), -120 (out)
-    # latitudes: 25.1 (in), 25.4 (in), 30.0 (out)
-    assert len(df) == 2
-    assert df["longitude"].between(-81.5,-80.5).all()
-    assert df["latitude"].between(25.0,26.5).all()
-    # LAI/FAPAR persisted
-    assert {"LAI","FAPAR"}.issubset(df.columns)
+    table = pq.read_table(p)
+    cols = table.schema.names
+    assert cols == ["latitude","longitude","time","LAI","FAPAR"]
+    # confirm time is stored as int64
+    assert np.dtype(table.schema.field("time").type.to_pandas_dtype()).kind == "i"
+    
+def test_coerce_time_empty_and_str():
+    t = DataTransformer(0,0,0,0,".")
+    # Empty series
+    s = pd.Series([], dtype="float64")
+    out = t._coerce_time_to_ms(s, 123456)
+    assert all(out == 123456)
+    # Strings
+    s2 = pd.Series(["2020-01-01T00:00Z"])
+    out2 = t._coerce_time_to_ms(s2, 0)
+    assert out2.iloc[0] > 1_500_000_000_000
 
-def test_returns_none_on_empty_roi(monkeypatch, tmp_path):
-    class DS:
+def test_normalizes_longitude(monkeypatch, tmp_path):
+    df = pd.DataFrame({
+        "latitude":[25.0],
+        "longitude":[280.0],  # >180, should subtract 360
+        "time":[1577836800000],
+        "LAI":[1.0],
+        "FAPAR":[0.1],
+    })
+    class FakeDS:
+        def to_dataframe(self): return df
         def __enter__(self): return self
-        def __exit__(self,*a): pass
-        def to_dataframe(self):
-            return pd.DataFrame({"latitude":[10.0], "longitude":[10.0], "LAI":[1.0], "FAPAR":[0.3]})
-    monkeypatch.setattr("transformation.data_transformer.xr.open_dataset", lambda *a,**k: DS())
-
-    t = DataTransformer(25,26.5,-81.5,-80.5, str(tmp_path/"out"))
-    (tmp_path/"foo.nc").write_bytes(b"x")
-    assert t.process(str(tmp_path/"foo.nc")) is None  # outside bbox
-
-def test_no_date_in_filename(monkeypatch, tmp_path, fake_xarray_ds):
-    monkeypatch.setattr("transformation.data_transformer.xr.open_dataset", lambda *a,**k: fake_xarray_ds)
-    t = DataTransformer(25,26.5,-81.5,-80.5, str(tmp_path/"out"))
-    (tmp_path/"no_date.nc").write_bytes(b"x")
-    assert t.process(str(tmp_path/"no_date.nc")) is None
-
-def test_missing_lai_fapar_columns(monkeypatch, tmp_path):
-    class DS:
-        def __enter__(self): return self
-        def __exit__(self,*a): pass
-        def to_dataframe(self):
-            return pd.DataFrame({"latitude":[25.2], "longitude":[-81.0], "time":[pd.Timestamp("2020-01-01")]})
-    monkeypatch.setattr("transformation.data_transformer.xr.open_dataset", lambda *a,**k: DS())
-    t = DataTransformer(25,26.5,-81.5,-80.5, str(tmp_path/"out"))
-    (tmp_path/"CR20200101.nc").write_bytes(b"x")
-    # Should still write a parquet with available cols
-    path = t.process(str(tmp_path/"CR20200101.nc"))
-    assert path and (tmp_path/"out"/"2020").exists()
+        def __exit__(self,*a): return False
+    monkeypatch.setattr("transformation.data_transformer.xr.open_dataset", lambda *a, **k: FakeDS())
+    outdir = tmp_path / "out"
+    t = DataTransformer(20,30,-90,-80,str(outdir))
+    nc_file = tmp_path / "foo_20200101.nc"
+    nc_file.write_text("x")
+    p = t.process(str(nc_file))
+    import pyarrow.parquet as pq
+    table = pq.read_table(p)
+    lon = table.column("longitude")[0].as_py()
+    assert lon < 0

@@ -1,36 +1,35 @@
 import os
-import io
-import types
 import pandas as pd
 import numpy as np
 import pytest
 
-@pytest.fixture(autouse=True)
-def _env(monkeypatch, tmp_path):
-    # Azure Storage creds (fake)
-    monkeypatch.setenv("AZURE_STORAGE_ACCOUNT", "fakeacct")
-    monkeypatch.setenv("AZURE_STORAGE_KEY", "fakekey")
-    # Working dirs
-    monkeypatch.chdir(tmp_path)
+class _FakeXRDataset:
+    """Minimal xarray-like context manager that returns a DataFrame."""
+    def __init__(self, df):
+        self._df = df
+    def __enter__(self): return self
+    def __exit__(self, *a): return False
+    def to_dataframe(self): return self._df
 
 @pytest.fixture
-def fake_xarray_ds():
-    """
-    Minimal xarray-like object: context manager with .to_dataframe()
-    Produces a small grid inside and outside the bbox.
-    """
-    class _DS:
-        def __enter__(self): return self
-        def __exit__(self, *args): pass
-        def to_dataframe(self):
-            # mix in/out of bounds, include >180 longitudes to test normalization
-            df = pd.DataFrame({
-                "latitude":  [25.1, 25.4, 30.0],
-                "longitude": [279.49, -80.9, -120.0],
-                "time":      pd.to_datetime(["2020-01-01","2020-01-01","2020-01-01"])
+def tmp_outdir(tmp_path):
+    d = tmp_path / "out"
+    d.mkdir()
+    return str(d)
+
+@pytest.fixture
+def fake_xarray_ds_factory():
+    def _factory(rows=None):
+        # Make a tiny DF that includes plausible columns + mixed time types
+        if rows is None:
+            rows = pd.DataFrame({
+                "latitude":  [25.10, 25.40, 30.00],     # last should be outside bbox
+                "longitude": [279.49, -80.90, -120.0],  # 279.49 => -80.51 after -360
+                # a mix: datetime64, seconds (int), ms (int), string is covered in transformer tests
+                "time": pd.to_datetime(["2020-01-01","2020-01-01","2020-01-01"]),
+                "LAI": [1.0, 2.0, 3.0],
+                "FAPAR": [0.2, 0.4, 0.6],
             })
-            # Add LAI/FAPAR like the Parquet schema
-            df["LAI"] = [1.5, 2.0, 3.0]
-            df["FAPAR"] = [0.35, 0.40, 0.50]
-            return df
-    return _DS()
+        return _FakeXRDataset(rows)
+    return _factory
+

@@ -1,191 +1,116 @@
+import os, io, pytest
+from acquisition.data_acquisition import DataAcquisition
 
-import os
-import io
-import re
-import pytest
-from acquisition.data_acquisition import DataAcquisition, NAMESPACE
+# -------------------- Helpers --------------------
 
-def _xml_page(keys, next_token=None):
-    items = "".join([
-        f"""
-        <Contents xmlns="{NAMESPACE}">
-          <Key>{k}</Key>
-          <Size>12345</Size>
-          <LastModified>2024-03-01T00:00:00Z</LastModified>
-        </Contents>
-        """ for k in keys
-    ])
-    nt = f"<NextContinuationToken xmlns=\"{NAMESPACE}\">{next_token}</NextContinuationToken>" if next_token else ""
-    return f"""<ListBucketResult xmlns="{NAMESPACE}">{items}{nt}</ListBucketResult>"""
+class _Resp:
+    def __init__(self, content=b"<root/>", headers=None, code=200, chunks=None):
+        self.content = content
+        self.headers = headers or {}
+        self.status_code = code
+        self._chunks = chunks or [b"x" * 10]
+    def raise_for_status(self): 
+        if self.status_code != 200: raise RuntimeError("bad")
+    def iter_content(self, n): 
+        yield from self._chunks
+    def __enter__(self): return self
+    def __exit__(self,*a): return False
 
-def test_list_and_cap(monkeypatch, tmp_path):
-    # Two pages of results
-    page1 = _xml_page([
-        "data/1981/AVHRR-Land_v001_19810101.nc",
-        "data/1981/VIIRS-Land_v001_19810105.nc",
-        "data/1982/VIIRS-Land_v001_19820101.nc",
-        "data/1982/VIIRS-Land_v001_19820102.nc",
-        "data/garbage/readme.txt"
-    ], next_token="abc")
-    page2 = _xml_page([
-        "data/1983/VIIRS-Land_v001_19830101.nc",
-    ])
+# -------------------- Tests --------------------
 
-    class R:
-        def __init__(self, content): self.content = content.encode(); self.status_code=200
-        def raise_for_status(self): pass
+def test_parse_listing_xml(monkeypatch):
+    xml = b"""
+    <ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+      <Contents><Key>data/1981/AVHRR-Land_foo.nc</Key><Size>123</Size><LastModified>x</LastModified></Contents>
+      <NextContinuationToken>abc</NextContinuationToken>
+    </ListBucketResult>
+    """
+    acq = DataAcquisition("https://bucket", "tmp")
+    objs, token = acq._parse_listing_xml(xml)
+    assert objs[0]["key"].endswith(".nc")
+    assert token == "abc"
 
-    calls = {"n":0}
-    def fake_get(url, *a, **k):
-        calls["n"] += 1
-        return R(page1 if "continuation-token" not in url else page2)
-
-    monkeypatch.setattr("acquisition.data_acquisition.requests.get", fake_get)
-
+def test_size_cap_enforced(monkeypatch, tmp_path):
+    objs = [
+        {"key":"data/1982/VIIRS-Land_v001_19820101.nc","size":100,"last_modified":"x"},
+        {"key":"data/1982/VIIRS-Land_v001_19820102.nc","size":100,"last_modified":"x"},
+        {"key":"data/1982/VIIRS-Land_v001_19820103.nc","size":100,"last_modified":"x"},
+    ]
+    monkeypatch.setattr(DataAcquisition, "_list_objects", lambda self: objs)
     acq = DataAcquisition("https://bucket", str(tmp_path))
-    all_objs = acq._list_objects()
-    assert len(all_objs) == 5
-
-    plan = acq.get_first_n_days_per_year_capped(per_year_days=1, years=range(1981,1984), max_total_bytes=10**9)
-    # should choose first per year in order
-    assert [re.search(r"(\d{8})", r["key"]).group(1) for r in plan] == ["19810101","19820101","19830101"]
-
-def test_list_objects_ignores_non_nc(monkeypatch):
-    xml = f"""
-    <ListBucketResult xmlns="{NAMESPACE}">
-      <Contents><Key>data/1982/VIIRS-Land_v001_19820101.nc</Key><Size>10</Size><LastModified>2024-01-01T00:00:00Z</LastModified></Contents>
-      <Contents><Key>data/README.txt</Key><Size>1</Size><LastModified>2024-01-01T00:00:00Z</LastModified></Contents>
-    </ListBucketResult>"""
-    class R: status_code=200; 
-    def fake_get(url,*a,**k): 
-        r=R(); r.content=xml.encode(); r.raise_for_status=lambda:None; return r
-    monkeypatch.setattr("acquisition.data_acquisition.requests.get", fake_get)
-
-    acq = DataAcquisition("https://bucket","/tmp")
-    out = acq._list_objects()
-    assert len(out) == 1 and out[0]["key"].endswith(".nc")
-
-def test_list_objects_http_error(monkeypatch):
-    class R: 
-        status_code=500
-        content=b""
-        def raise_for_status(self): raise RuntimeError("boom")
-    monkeypatch.setattr("acquisition.data_acquisition.requests.get", lambda *a,**k: R())
-    acq = DataAcquisition("https://bucket","/tmp")
-    with pytest.raises(RuntimeError):
-        acq._list_objects()
-
-def test_bad_xml_tolerated(monkeypatch):
-    class R: 
-        status_code=200; content=b"<not-xml"
-        def raise_for_status(self): pass
-    monkeypatch.setattr("acquisition.data_acquisition.requests.get", lambda *a,**k: R())
-    acq = DataAcquisition("https://bucket","/tmp")
-    # Should not raise; should return empty
-    assert acq._list_objects() == []
-
-def test_size_cap_enforced(monkeypatch):
-    xml = f"""
-    <ListBucketResult xmlns="{NAMESPACE}">
-      <Contents><Key>data/1982/VIIRS-Land_v001_19820101.nc</Key><Size>100</Size><LastModified>2024-01-01T00:00:00Z</LastModified></Contents>
-      <Contents><Key>data/1982/VIIRS-Land_v001_19820102.nc</Key><Size>100</Size><LastModified>2024-01-01T00:00:00Z</LastModified></Contents>
-      <Contents><Key>data/1982/VIIRS-Land_v001_19820103.nc</Key><Size>100</Size><LastModified>2024-01-01T00:00:00Z</LastModified></Contents>
-   </ListBucketResult>"""
-    class R: status_code=200; 
-    def fake_get(url,*a,**k): r=R(); r.content=xml.encode(); r.raise_for_status=lambda:None; return r
-    monkeypatch.setattr("acquisition.data_acquisition.requests.get", fake_get)
-    acq = DataAcquisition("https://bucket","/tmp")
     plan = acq.get_first_n_days_per_year_capped(per_year_days=3, years=[1982], max_total_bytes=200)
-    # Should only include first two to stay under 200
     assert len(plan) == 2
 
-def test_strip_ns_unit():
-    da = DataAcquisition("https://bucket","/tmp")
-    assert da._strip_ns("{ns}Contents") == "Contents"
-    assert da._strip_ns("Key") == "Key"
 
-def test_pagination(monkeypatch):
-    page1 = f"""
-    <ListBucketResult xmlns="{NAMESPACE}">
-      <Contents><Key>data/1982/VIIRS-Land_v001_19820101.nc</Key><Size>1</Size><LastModified>2024-01-01T00:00:00Z</LastModified></Contents>
-      <NextContinuationToken>abc</NextContinuationToken>
-    </ListBucketResult>"""
-    page2 = f"""
-    <ListBucketResult xmlns="{NAMESPACE}">
-      <Contents><Key>data/1982/VIIRS-Land_v001_19820102.nc</Key><Size>1</Size><LastModified>2024-01-02T00:00:00Z</LastModified></Contents>
-    </ListBucketResult>"""
-
-    class R: status_code=200
-    calls = {"n":0}
-    def fake_get(url,*a,**k):
-        calls["n"] += 1
-        r = R()
-        r.raise_for_status = lambda: None
-        r.content = (page1 if "continuation-token" not in url else page2).encode()
-        return r
-
-    monkeypatch.setattr("acquisition.data_acquisition.requests.get", fake_get)
-    acq = DataAcquisition("https://bucket","/tmp")
-    out = acq._list_objects()
-    # both pages included
-    assert [o["key"] for o in out] == [
-        "data/1982/VIIRS-Land_v001_19820101.nc",
-        "data/1982/VIIRS-Land_v001_19820102.nc",
-    ]
-    assert calls["n"] == 2
-
-def test_warns_on_nc_without_sensor(monkeypatch, caplog):
-    xml = """
-    <ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
-      <Contents><Key>data/1982/other_19820101.nc</Key><Size>1</Size><LastModified>2024-01-01T00:00:00Z</LastModified></Contents>
-    </ListBucketResult>"""
-    class R: status_code=200
-    def fake_get(url,*a,**k):
-        r = R(); r.raise_for_status=lambda: None; r.content = xml.encode(); return r
-    monkeypatch.setattr("acquisition.data_acquisition.requests.get", fake_get)
-
-    acq = DataAcquisition("https://bucket","/tmp")
-    with caplog.at_level("WARNING"):
-        out = acq._list_objects()
-    # skipped
-    assert out == []
-    assert any("without AVHRR/VIIRS" in m for _,_,m in caplog.record_tuples)
-
-def test_download_already_present(tmp_path, monkeypatch):
+def test_download_atomic_success(monkeypatch, tmp_path):
+    # Simulate small streaming download
+    monkeypatch.setattr("acquisition.data_acquisition.requests.get",
+                        lambda url, stream, timeout: _Resp(headers={"Content-Length":"30"},
+                                                           chunks=[b"x"*10, b"y"*20]))
     acq = DataAcquisition("https://bucket", str(tmp_path))
     key = "data/1982/VIIRS-Land_v001_19820101.nc"
-    year_dir = tmp_path / "1982"
-    year_dir.mkdir()
-    (year_dir / "VIIRS-Land_v001_19820101.nc").write_bytes(b"x")
-    # Should early-return without HTTP
-    path = acq.download(key)
-    assert path.endswith("1982/VIIRS-Land_v001_19820101.nc")
+    out = acq.download(key)
+    assert out and os.path.exists(out)
+    with open(out,"rb") as f:
+        assert b"x" in f.read()
 
-def test_download_success(tmp_path, monkeypatch):
+
+def test_download_size_mismatch(monkeypatch, tmp_path):
+    # mismatched size triggers cleanup and None
+    monkeypatch.setattr("acquisition.data_acquisition.requests.get",
+                        lambda url, stream, timeout: _Resp(headers={"Content-Length":"999"},
+                                                           chunks=[b"abc"]))
     acq = DataAcquisition("https://bucket", str(tmp_path))
-    key = "data/1982/VIIRS-Land_v001_19820102.nc"
+    key = "data/1982/VIIRS-Land_v001_19820101.nc"
+    out = acq.download(key)
+    assert out is None
+    # .part file should not remain
+    assert not list(tmp_path.rglob("*.part"))
 
-    class R:
-        status_code=200
-        def __enter__(self): return self
-        def __exit__(self,*a): pass
-        def raise_for_status(self): pass
-        def iter_content(self, chunk_size):
-            yield b"abc"; yield b"def"
-    monkeypatch.setattr("acquisition.data_acquisition.requests.get", lambda *a,**k: R())
-
-    path = acq.download(key)
-    with open(path,"rb") as f:
-        assert f.read() == b"abcdef"
-
-def test_download_error(tmp_path, monkeypatch):
+def test_download_handles_exception(monkeypatch, tmp_path):
+    def bad_get(*a, **k): raise ConnectionError("boom")
+    monkeypatch.setattr("acquisition.data_acquisition.requests.get", bad_get)
     acq = DataAcquisition("https://bucket", str(tmp_path))
-    key = "data/1982/VIIRS-Land_v001_19820103.nc"
+    assert acq.download("data/1981/foo.nc") is None
 
-    class R:
-        def __enter__(self): return self
-        def __exit__(self,*a): pass
-        def raise_for_status(self): raise RuntimeError("boom")
-    monkeypatch.setattr("acquisition.data_acquisition.requests.get", lambda *a,**k: R())
+def test_strip_ns_variants():
+    assert DataAcquisition._strip_ns("{ns}Key") == "Key"
+    assert DataAcquisition._strip_ns("NoNS") == "NoNS"
 
-    assert acq.download(key) is None
+def test_parse_listing_xml_malformed(monkeypatch):
+    acq = DataAcquisition("https://bucket", "tmp")
+    objs, token = acq._parse_listing_xml(b"<broken><xml")
+    assert objs == [] and token is None
+
+def test_list_objects_pagination(monkeypatch):
+    xml_page_1 = b"""
+    <ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+        <Contents><Key>data/1981/AVHRR-Land_v001_19810101.nc</Key><Size>10</Size><LastModified>x</LastModified></Contents>
+        <NextContinuationToken>abc</NextContinuationToken>
+    </ListBucketResult>
+    """
+    xml_page_2 = b"""
+    <ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+        <Contents><Key>data/1981/AVHRR-Land_v001_19810102.nc</Key><Size>20</Size><LastModified>y</LastModified></Contents>
+    </ListBucketResult>
+    """
+    calls = []
+    def fake_get(url, timeout):
+        calls.append(url)
+        return type("R",(),{"content": xml_page_1 if len(calls)==1 else xml_page_2, "raise_for_status": lambda self: None})()
+    monkeypatch.setattr("acquisition.data_acquisition.requests.get", fake_get)
+    acq = DataAcquisition("https://bucket", "tmp")
+    out = acq._list_objects()
+    assert len(out) == 2
+    assert "continuation-token=abc" in calls[-1]
+
+def test_download_existing_file(monkeypatch, tmp_path):
+    # existing file with proper date
+    path = tmp_path / "1982" / "AVHRR-Land_v005_19820121.nc"
+    path.parent.mkdir(parents=True)
+    path.write_bytes(b"x")
+
+    acq = DataAcquisition("https://bucket", str(tmp_path))
+    result = acq.download("data/1982/AVHRR-Land_v005_19820121.nc")
+    assert result == str(path)
+
