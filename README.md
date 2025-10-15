@@ -8,7 +8,7 @@ The pipeline is designed to support exploratory analysis of climate change impac
 
 This project investigates the long-term relationship between vegetation health and climate variability in the Florida Everglades using the NOAA Climate Data Records (CDR) of Leaf Area Index (LAI) and Fraction of Absorbed Photosynthetically Active Radiation (FAPAR).
 
-We hypothesize that over the 40-year period from 1985 to 2025, the Everglades exhibit a moderate upward trend in LAI—indicating gradual increases in vegetation density and canopy greenness—accompanied by a slight but consistent increase in FAPAR, suggesting improved photosynthetic efficiency and energy absorption by plant canopies. These changes are expected to correlate with warming temperatures and longer growing seasons driven by global climate change.
+I hypothesize that over the 40-year period from 1985 to 2025, the Everglades exhibit a moderate upward trend in LAI—indicating gradual increases in vegetation density and canopy greenness—accompanied by a slight but consistent increase in FAPAR, suggesting improved photosynthetic efficiency and energy absorption by plant canopies. These changes are expected to correlate with warming temperatures and longer growing seasons driven by global climate change.
 
 The intent of this study is to leverage automated, reproducible data engineering methods to transform NOAA’s satellite-derived CDRs into an analysis-ready dataset, enabling objective trend assessment and validation of climate–vegetation interactions within a sensitive subtropical ecosystem.
 
