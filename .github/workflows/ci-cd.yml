@@ -6,19 +6,18 @@ on:
 
 jobs:
   deploy:
-    needs: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
       - uses: databricks/setup-cli@v1
+
       - name: Configure Databricks auth (PAT)
         run: databricks configure --host "$DATABRICKS_HOST" --token "$DATABRICKS_TOKEN"
         env:
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
 
-      # Pull latest commit into your Databricks Repo
       - name: Update Databricks Repo to latest
         run: databricks repos update --path "${REPO_PATH}" --branch "${GITHUB_REF_NAME}"
         env:
