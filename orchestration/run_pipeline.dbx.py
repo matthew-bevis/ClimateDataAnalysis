@@ -14,7 +14,7 @@
 
 # ===== Parameters & Secret Setup =====
 
-dbutils.widgets.text("PROJECT_ROOT", "/Workspace/Users/matthew-bevis@comcast.net/ClimateDataAnalysis")
+dbutils.widgets.text("PROJECT_ROOT", "/Workspace/Repos/matthew-bevis@comcast.net/ClimateDataAnalysis")
 dbutils.widgets.text("SECRET_SCOPE", "climate-scope")
 dbutils.widgets.text("AZURE_ACCOUNT_KEY_NAME", "AZURE_STORAGE_KEY")
 dbutils.widgets.text("AZURE_ACCOUNT_NAME_NAME", "AZURE_STORAGE_ACCOUNT")
