@@ -1,0 +1,37 @@
+name: ci-cd
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install deps
+        run: pip install -r requirements.txt
+      - name: Run unit tests
+        run: pytest -q
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: databricks/setup-cli@v1
+      - name: Configure Databricks auth (PAT)
+        run: databricks configure --host "$DATABRICKS_HOST" --token "$DATABRICKS_TOKEN"
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+
+      # Pull latest commit into your Databricks Repo
+      - name: Update Databricks Repo to latest
+        run: databricks repos update --path "${REPO_PATH}" --branch "${GITHUB_REF_NAME}"
+        env:
+          REPO_PATH: ${{ secrets.REPO_PATH }}
