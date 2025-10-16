@@ -5,6 +5,7 @@ xarray==2024.7.0
 netCDF4==1.7.2
 matplotlib==3.10.7
 pyarrow==21.0.0
+dotenv==0.9.9
 
 # Big Data / Spark
 pyspark==3.5.7   # Apache Spark (PySpark API)
