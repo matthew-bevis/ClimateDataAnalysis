@@ -13,15 +13,8 @@ jobs:
       - name: Install Databricks CLI
         run: pip install databricks-cli
 
-      - name: Configure Databricks auth (PAT)
-        run: databricks configure --host "$DATABRICKS_HOST" --token "$DATABRICKS_TOKEN"
+      - name: Update Databricks Repo to latest
         env:
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
-
-      - name: Update Databricks Repo to latest
         run: databricks repos update --path "${REPO_PATH}" --branch "${GITHUB_REF_NAME}"
-        env:
-          REPO_PATH: ${{ secrets.REPO_PATH }}
-
-
