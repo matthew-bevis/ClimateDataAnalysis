@@ -10,7 +10,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: databricks/setup-cli@v1
+      - name: Setup Databricks CLI
+        uses: databricks/setup-databricks-cli@v1
 
       - name: Configure Databricks auth (PAT)
         run: databricks configure --host "$DATABRICKS_HOST" --token "$DATABRICKS_TOKEN"
@@ -22,3 +23,4 @@ jobs:
         run: databricks repos update --path "${REPO_PATH}" --branch "${GITHUB_REF_NAME}"
         env:
           REPO_PATH: ${{ secrets.REPO_PATH }}
+
