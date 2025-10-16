@@ -1,87 +1,112 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # Climate Pipeline Runner (Databricks)
-# MAGIC Use this notebook to run your existing pipeline code on Databricks **without modifying your repo**.
-# MAGIC - Pulls secrets from a Databricks Secret Scope and exports them as env vars your code already expects.
-# MAGIC - Optionally sets Spark config for ABFSS reads.
-# MAGIC - Imports and runs `ClimatePipeline` from your repo.
+# MAGIC # Climate Data Pipeline Runner (Databricks)
+# MAGIC This notebook runs your updated **parallelized Climate Data Analysis Pipeline** on Databricks.
+# MAGIC 
+# MAGIC Features:
+# MAGIC - Pulls **Azure credentials** from a Databricks secret scope  
+# MAGIC - Exports environment variables expected by your repo  
+# MAGIC - Supports **parallel downloads & transformations** via `ThreadPoolExecutor`  
+# MAGIC - Integrates with **Azure Data Lake (ABFSS)** for output validation  
+# MAGIC - Provides optional runtime parameterization and lightweight Spark validation
 
 # COMMAND ----------
 
-# ===== 1) Parameters & Secrets -> Environment Variables =====
+# ===== Parameters & Secret Setup =====
 
 dbutils.widgets.text("PROJECT_ROOT", "/Workspace/Users/matthew-bevis@comcast.net/ClimateDataAnalysis")
 dbutils.widgets.text("SECRET_SCOPE", "climate-scope")
 dbutils.widgets.text("AZURE_ACCOUNT_KEY_NAME", "AZURE_STORAGE_KEY")
 dbutils.widgets.text("AZURE_ACCOUNT_NAME_NAME", "AZURE_STORAGE_ACCOUNT")
+dbutils.widgets.text("CONTAINER", "climate-data-analysis")
 dbutils.widgets.text("PER_YEAR_DAYS", "10")
 dbutils.widgets.text("MAX_TOTAL_GB", "3.0")
+dbutils.widgets.text("MAX_WORKERS", "4")
 dbutils.widgets.text("SET_ABFSS_CONF", "true")
 
 PROJECT_ROOT = dbutils.widgets.get("PROJECT_ROOT")
 SCOPE        = dbutils.widgets.get("SECRET_SCOPE")
 KEY_NAME     = dbutils.widgets.get("AZURE_ACCOUNT_KEY_NAME")
 ACC_NAME     = dbutils.widgets.get("AZURE_ACCOUNT_NAME_NAME")
+CONTAINER    = dbutils.widgets.get("CONTAINER")
 PER_YEAR_DAYS = int(dbutils.widgets.get("PER_YEAR_DAYS"))
 MAX_TOTAL_GB  = float(dbutils.widgets.get("MAX_TOTAL_GB"))
+MAX_WORKERS   = int(dbutils.widgets.get("MAX_WORKERS"))
 SET_ABFSS_CONF = dbutils.widgets.get("SET_ABFSS_CONF").lower() == "true"
 
-# Pull secrets from scope
-account = dbutils.secrets.get(SCOPE, ACC_NAME)
-key     = dbutils.secrets.get(SCOPE, KEY_NAME)
+# Retrieve Azure credentials from Databricks Secret Scope
+account_name = dbutils.secrets.get(SCOPE, ACC_NAME)
+account_key  = dbutils.secrets.get(SCOPE, KEY_NAME)
 
-# Export as env vars expected by your existing DataStorage class
 import os
-os.environ["AZURE_STORAGE_ACCOUNT"] = account
-os.environ["AZURE_STORAGE_KEY"]     = key
+os.environ["AZURE_STORAGE_ACCOUNT"] = account_name
+os.environ["AZURE_STORAGE_KEY"] = account_key
 
 if SET_ABFSS_CONF:
-    spark.conf.set(f"fs.azure.account.key.{account}.dfs.core.windows.net", key)
+    spark.conf.set(f"fs.azure.account.key.{account_name}.dfs.core.windows.net", account_key)
 
-print(f"- PROJECT_ROOT: {PROJECT_ROOT}")
-print(f"- AZURE_STORAGE_ACCOUNT: {account}")
-print(f"- ABFSS Spark conf set: {SET_ABFSS_CONF}")
+print(f"Project root: {PROJECT_ROOT}")
+print(f"Storage account: {account_name}")
+print(f"Container: {CONTAINER}")
+print(f"Parallel workers: {MAX_WORKERS}")
+print(f"ABFSS config set: {SET_ABFSS_CONF}")
 
 # COMMAND ----------
 
-# ===== 2) Import your repo code =====
-import sys
+# ===== Import Repo Code =====
+import sys, os
 if PROJECT_ROOT not in sys.path:
     sys.path.append(PROJECT_ROOT)
 
-import os
-print("Repo contents (top-level):", os.listdir(PROJECT_ROOT))
+print("Repo contents:", os.listdir(PROJECT_ROOT))
 
 from pipeline.climate_pipeline import ClimatePipeline
-
-print("Imported ClimatePipeline")
+print("Imported ClimatePipeline successfully")
 
 # COMMAND ----------
 
-print(f"Running ClimatePipeline().run(per_year_days={PER_YEAR_DAYS}, max_total_gb={MAX_TOTAL_GB}) ...")
-ClimatePipeline().run(per_year_days=PER_YEAR_DAYS, max_total_gb=MAX_TOTAL_GB)
-print("Pipeline run complete")
+# ===== Run the Pipeline =====
+print(f"Running ClimatePipeline with per_year_days={PER_YEAR_DAYS}, max_total_gb={MAX_TOTAL_GB}, workers={MAX_WORKERS}")
+
+try:
+    ClimatePipeline().run(per_year_days=PER_YEAR_DAYS, max_total_gb=MAX_TOTAL_GB, max_workers=MAX_WORKERS)
+    print("Pipeline execution complete.")
+except Exception as e:
+    print("Pipeline failed:", e)
+    raise
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### (Optional) Quick validation: read a sample of uploaded Parquet from ADLS
-# MAGIC If your pipeline writes to `abfss://<container>@<account>.dfs.core.windows.net/climate_data/<year>/*.parquet`,
-# MAGIC set the variables below and preview a few rows.
+# MAGIC ## Optional Validation: Inspect Parquet in ADLS
+# MAGIC Quickly preview the output of your pipeline to verify schema and records.
 
 # COMMAND ----------
 
-dbutils.widgets.text("CONTAINER", "climate-data-analysis")
-dbutils.widgets.text("SAMPLE_GLOB", "climate_data/*/*.parquet")  # adjust if needed
-
-CONTAINER = dbutils.widgets.get("CONTAINER")
+dbutils.widgets.text("SAMPLE_GLOB", "climate_data/*/*.parquet")
 SAMPLE_GLOB = dbutils.widgets.get("SAMPLE_GLOB")
 
-abfss_path = f"abfss://{CONTAINER}@{account}.dfs.core.windows.net/{SAMPLE_GLOB}"
-print("ABFSS path:", abfss_path)
+abfss_path = f"abfss://{CONTAINER}@{account_name}.dfs.core.windows.net/{SAMPLE_GLOB}"
+print("Sample ABFSS path:", abfss_path)
 
 try:
-    df = spark.read.parquet(abfss_path).limit(10)
+    df = spark.read.parquet(abfss_path).limit(20)
     display(df)
 except Exception as e:
-    print("Could not preview data:", e)
+    print("Unable to read Parquet data:", e)
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## (Optional) Test & Coverage Run
+# MAGIC You can run your pytest suite inside Databricks (if repo tests are present) for regression validation.
+
+# COMMAND ----------
+
+# Optional: only run if pytest is installed
+try:
+    import pytest
+    print("Running pytest coverage...")
+    !pytest -q --cov=pipeline --cov=transformation --cov=acquisition --cov=storage --cov=utils --cov-report=term-missing
+except Exception as e:
+    print("Pytest not available or failed:", e)
