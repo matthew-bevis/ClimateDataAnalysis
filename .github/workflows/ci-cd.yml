@@ -17,4 +17,9 @@ jobs:
         env:
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
-        run: databricks repos update --path "${REPO_PATH}" --branch "${GITHUB_REF_NAME}"
+          REPO_PATH: ${{ secrets.REPO_PATH }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+        run: |
+          CLEAN_PATH=$(echo "$REPO_PATH" | tr -d '"' | xargs)
+          echo "Using REPO_PATH: '$CLEAN_PATH'"
+          databricks repos update --path "$CLEAN_PATH" --branch "$GITHUB_REF_NAME"
