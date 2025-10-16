@@ -23,12 +23,15 @@ dbutils.widgets.text("PER_YEAR_DAYS", "10")
 dbutils.widgets.text("MAX_TOTAL_GB", "3.0")
 dbutils.widgets.text("MAX_WORKERS", "4")
 dbutils.widgets.text("SET_ABFSS_CONF", "true")
+dbutils.widgets.text("APPINSIGHTS_SECRET_NAME", "APPLICATIONINSIGHTS_CONNECTION_STRING")
 
+AI_NAME      = dbutils.widgets.get("APPINSIGHTS_SECRET_NAME")
 PROJECT_ROOT = dbutils.widgets.get("PROJECT_ROOT")
 SCOPE        = dbutils.widgets.get("SECRET_SCOPE")
 KEY_NAME     = dbutils.widgets.get("AZURE_ACCOUNT_KEY_NAME")
 ACC_NAME     = dbutils.widgets.get("AZURE_ACCOUNT_NAME_NAME")
 CONTAINER    = dbutils.widgets.get("CONTAINER")
+
 PER_YEAR_DAYS = int(dbutils.widgets.get("PER_YEAR_DAYS"))
 MAX_TOTAL_GB  = float(dbutils.widgets.get("MAX_TOTAL_GB"))
 MAX_WORKERS   = int(dbutils.widgets.get("MAX_WORKERS"))
@@ -37,10 +40,12 @@ SET_ABFSS_CONF = dbutils.widgets.get("SET_ABFSS_CONF").lower() == "true"
 # Retrieve Azure credentials from Databricks Secret Scope
 account_name = dbutils.secrets.get(SCOPE, ACC_NAME)
 account_key  = dbutils.secrets.get(SCOPE, KEY_NAME)
+ai_conn = dbutils.secrets.get(SCOPE, AI_NAME)
 
 import os
 os.environ["AZURE_STORAGE_ACCOUNT"] = account_name
 os.environ["AZURE_STORAGE_KEY"] = account_key
+os.environ["APPLICATIONINSIGHTS_CONNECTION_STRING"] = ai_conn
 
 if SET_ABFSS_CONF:
     spark.conf.set(f"fs.azure.account.key.{account_name}.dfs.core.windows.net", account_key)
