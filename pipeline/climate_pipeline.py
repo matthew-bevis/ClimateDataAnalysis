@@ -44,8 +44,6 @@ def _transform_one(nc_path, lat_min, lat_max, lon_min, lon_max, outdir, logger, 
         with start_span(tracer, "transform", {"nc_path": nc_path}):
             transformer = DataTransformer(lat_min, lat_max, lon_min, lon_max, outdir)
             parquet = transformer.process(nc_path)
-
-        # best-effort raw cleanup
         try:
             if os.path.exists(nc_path):
                 os.remove(nc_path)
@@ -63,7 +61,6 @@ def _transform_one(nc_path, lat_min, lat_max, lon_min, lon_max, outdir, logger, 
 
 class ClimatePipeline:
     def __init__(self):
-        # Use your existing logger, then bind telemetry to THIS logger name
         self.logger = get_logger(self.__class__.__name__)
         self.logger, self.tracer = init_telemetry(logger_name=self.logger.name)
 

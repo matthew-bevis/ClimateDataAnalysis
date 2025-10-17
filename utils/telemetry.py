@@ -138,6 +138,7 @@ def init_telemetry(
 
             tracer = trace.get_tracer(os.environ.get("OTEL_SERVICE_NAME", "climate-pipeline"))
             logger.info("OpenTelemetry → Azure Monitor initialized.")
+            print("✅ Telemetry initialized — logs and traces will be sent to Azure Application Insights.")
         except Exception as e:
             logger.warning(f"OpenTelemetry init failed: {e}")
 
