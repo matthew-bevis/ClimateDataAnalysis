@@ -1,28 +1,29 @@
 # Core utilities
-requests==2.32.3
-pandas==2.2.3
-xarray==2024.7.0
-netCDF4==1.7.2
-matplotlib==3.10.7
-pyarrow==21.0.0
-dotenv==0.9.9
+requests>=2.32.3
+pandas>=2.2.3
+xarray>=2024.7.0
+netCDF4>=1.7.2
+matplotlib>=3.10.7
+pyarrow>=21.0.0
+dotenv>=0.9.9
 
 # Big Data / Spark
 pyspark==3.5.7   # Apache Spark (PySpark API)
 
 # Azure Storage
-azure-storage-blob==12.26.0   # Azure Blob Storage SDK
+azure-storage-blob>=12.26.0   # Azure Blob Storage SDK
 
 # Workflow orchestration (Airflow prototype)
-apache-airflow==2.10.2
+apache-airflow>=2.10.2
 
 # Logging
-loguru==0.7.2
+loguru>=0.7.2
 azure-monitor-opentelemetry>=1.6.2
 opentelemetry-instrumentation-requests>=0.48b0
 opencensus-ext-azure>=1.1.9
+azure-core-tracing-opentelemetry>=1.0.0b12
 
 # Testing
-pytest==8.3.3
-pytest-cov==5.0.0
-freezegun==1.5.1
+pytest>=8.3.3
+pytest-cov>=5.0.0
+freezegun>=1.5.1
