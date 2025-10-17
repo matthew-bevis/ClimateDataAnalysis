@@ -1,0 +1,591 @@
+{
+  "properties": {
+    "lenses": [
+      {
+        "order": 0,
+        "parts": [
+          {
+            "position": {
+              "x": 0,
+              "y": 0,
+              "colSpan": 6,
+              "rowSpan": 4
+            },
+            "metadata": {
+              "inputs": [
+                {
+                  "name": "isShared",
+                  "isOptional": true
+                },
+                {
+                  "name": "queryId",
+                  "isOptional": true
+                },
+                {
+                  "name": "formatResults",
+                  "isOptional": true
+                },
+                {
+                  "name": "partTitle",
+                  "value": "Query 1",
+                  "isOptional": true
+                },
+                {
+                  "name": "chartType",
+                  "value": 2,
+                  "isOptional": true
+                },
+                {
+                  "name": "queryScope",
+                  "value": {
+                    "scope": 0,
+                    "values": []
+                  },
+                  "isOptional": true
+                },
+                {
+                  "name": "query",
+                  "value": "resources\n| where resourceGroup =~ \"ClimateDataAnalysis\"\n| summarize Count=count() by location, type",
+                  "isOptional": true
+                }
+              ],
+              "type": "Extension/HubsExtension/PartType/ArgQueryChartTile",
+              "settings": {},
+              "partHeader": {
+                "title": "Resources",
+                "subtitle": "Resources Allocated to Climate Data Analysis Project"
+              }
+            }
+          },
+          {
+            "position": {
+              "x": 6,
+              "y": 0,
+              "colSpan": 6,
+              "rowSpan": 4
+            },
+            "metadata": {
+              "inputs": [
+                {
+                  "name": "ComponentId",
+                  "value": "/subscriptions/5b2fdc00-414e-4d47-b648-915c47641491/resourceGroups/ClimateDataAnalysis/providers/microsoft.insights/components/ClimateDataAnalysis-Insights"
+                }
+              ],
+              "type": "Extension/AppInsightsExtension/PartType/AppMapGalPt",
+              "settings": {},
+              "asset": {
+                "idInputName": "ComponentId",
+                "type": "ApplicationInsights"
+              }
+            }
+          },
+          {
+            "position": {
+              "x": 12,
+              "y": 0,
+              "colSpan": 6,
+              "rowSpan": 4
+            },
+            "metadata": {
+              "inputs": [
+                {
+                  "name": "scope",
+                  "value": "/providers/Microsoft.Billing/billingAccounts/eae30cdb-89f7-5304-965f-a5f75ffb1ab2:68b2fffe-03ab-4e1a-9baf-2d48a59385ea_2019-05-31/billingProfiles/KNYU-NIW2-BG7-PGB/invoiceSections/GZKH-VZQX-PJA-PGB"
+                },
+                {
+                  "name": "scopeName",
+                  "value": "Matthew Bevis"
+                },
+                {
+                  "name": "view",
+                  "value": {
+                    "currency": "USD",
+                    "dateRange": "ThisMonth",
+                    "query": {
+                      "type": "ActualCost",
+                      "dataSet": {
+                        "granularity": "Daily",
+                        "aggregation": {
+                          "totalCost": {
+                            "name": "Cost",
+                            "function": "Sum"
+                          },
+                          "totalCostUSD": {
+                            "name": "CostUSD",
+                            "function": "Sum"
+                          }
+                        },
+                        "sorting": [
+                          {
+                            "direction": "ascending",
+                            "name": "UsageDate"
+                          }
+                        ],
+                        "filter": {
+                          "Dimensions": {
+                            "Name": "ResourceGroupName",
+                            "Operator": "In",
+                            "Values": [
+                              "climatedataanalysis",
+                              "databricks-rg-climatedataanalysis-qq7nvcmlvx55e"
+                            ]
+                          }
+                        }
+                      },
+                      "timeframe": "None"
+                    },
+                    "chart": "Area",
+                    "accumulated": "true",
+                    "pivots": [
+                      {
+                        "type": "Dimension",
+                        "name": "ServiceName"
+                      },
+                      {
+                        "type": "Dimension",
+                        "name": "ResourceLocation"
+                      },
+                      {
+                        "type": "Dimension",
+                        "name": "ResourceGroupName"
+                      }
+                    ],
+                    "scope": "providers/Microsoft.Billing/billingAccounts/eae30cdb-89f7-5304-965f-a5f75ffb1ab2:68b2fffe-03ab-4e1a-9baf-2d48a59385ea_2019-05-31/billingProfiles/KNYU-NIW2-BG7-PGB/invoiceSections/GZKH-VZQX-PJA-PGB",
+                    "kpis": [
+                      {
+                        "type": "Budget",
+                        "id": "COST_NAVIGATOR.BUDGET_OPTIONS.NONE",
+                        "enabled": true,
+                        "extendedProperties": {
+                          "name": "COST_NAVIGATOR.BUDGET_OPTIONS.NONE"
+                        }
+                      },
+                      {
+                        "type": "Forecast",
+                        "enabled": true
+                      }
+                    ],
+                    "displayName": "AccumulatedCosts"
+                  },
+                  "isOptional": true
+                },
+                {
+                  "name": "externalState",
+                  "isOptional": true
+                }
+              ],
+              "type": "Extension/Microsoft_Azure_CostManagement/PartType/CostAnalysisPinPart"
+            }
+          },
+          {
+            "position": {
+              "x": 0,
+              "y": 4,
+              "colSpan": 6,
+              "rowSpan": 4
+            },
+            "metadata": {
+              "inputs": [
+                {
+                  "name": "ComponentId",
+                  "value": "/subscriptions/5b2fdc00-414e-4d47-b648-915c47641491/resourceGroups/ClimateDataAnalysis/providers/microsoft.insights/components/ClimateDataAnalysis-Insights",
+                  "isOptional": true
+                },
+                {
+                  "name": "TimeContext",
+                  "value": null,
+                  "isOptional": true
+                },
+                {
+                  "name": "ResourceIds",
+                  "value": [
+                    "/subscriptions/5b2fdc00-414e-4d47-b648-915c47641491/resourceGroups/ClimateDataAnalysis/providers/microsoft.insights/components/ClimateDataAnalysis-Insights"
+                  ],
+                  "isOptional": true
+                },
+                {
+                  "name": "ConfigurationId",
+                  "value": null,
+                  "isOptional": true
+                },
+                {
+                  "name": "Type",
+                  "value": "workbook",
+                  "isOptional": true
+                },
+                {
+                  "name": "GalleryResourceType",
+                  "value": "microsoft.insights/components",
+                  "isOptional": true
+                },
+                {
+                  "name": "PinName",
+                  "value": null,
+                  "isOptional": true
+                },
+                {
+                  "name": "StepSettings",
+                  "value": "{\"version\":\"KqlItem/1.0\",\"query\":\"dependencies | where name in (\\\"plan_files\\\",\\\"downloads\\\",\\\"process_and_upload\\\") | summarize avgDuration=avg(duration) by name\",\"size\":0,\"timeContext\":{\"durationMs\":86400000},\"queryType\":0,\"resourceType\":\"microsoft.insights/components\",\"visualization\":\"barchart\"}",
+                  "isOptional": true
+                },
+                {
+                  "name": "ParameterValues",
+                  "value": {},
+                  "isOptional": true
+                },
+                {
+                  "name": "Location",
+                  "isOptional": true
+                }
+              ],
+              "type": "Extension/AppInsightsExtension/PartType/PinnedNotebookQueryPart",
+              "partHeader": {
+                "title": "Files Downloaded and Processed",
+                "subtitle": "(Some files are skipped by checkpoint if already processed)"
+              }
+            }
+          },
+          {
+            "position": {
+              "x": 6,
+              "y": 4,
+              "colSpan": 6,
+              "rowSpan": 4
+            },
+            "metadata": {
+              "inputs": [],
+              "type": "Extension/HubsExtension/PartType/MarkdownPart",
+              "settings": {
+                "content": {
+                  "content": "<div style=\"text-align: center; padding-top: 70px\">\n  <div>\n    <h1 style=\"font-size: 50px; color:#34DE21; font-family:'Andale Mono', monospace; line-height: 1.1; margin: 0;\">\n      Climate Data<br>Analysis Dashboard\n    </h1>\n    <p style=\"font-size:15px; color:#777; font-style:italic; margin-top:8px;\">\n      Live pipeline telemetry and system health — powered by Application Insights\n    </p>\n  </div>\n</div>\n",
+                  "title": "",
+                  "subtitle": "",
+                  "markdownSource": 1,
+                  "markdownUri": ""
+                }
+              }
+            }
+          },
+          {
+            "position": {
+              "x": 12,
+              "y": 4,
+              "colSpan": 6,
+              "rowSpan": 4
+            },
+            "metadata": {
+              "inputs": [
+                {
+                  "name": "ComponentId",
+                  "value": "/subscriptions/5b2fdc00-414e-4d47-b648-915c47641491/resourceGroups/ClimateDataAnalysis/providers/microsoft.insights/components/ClimateDataAnalysis-Insights",
+                  "isOptional": true
+                },
+                {
+                  "name": "TimeContext",
+                  "value": null,
+                  "isOptional": true
+                },
+                {
+                  "name": "ResourceIds",
+                  "value": [
+                    "/subscriptions/5b2fdc00-414e-4d47-b648-915c47641491/resourceGroups/ClimateDataAnalysis/providers/microsoft.insights/components/ClimateDataAnalysis-Insights"
+                  ],
+                  "isOptional": true
+                },
+                {
+                  "name": "ConfigurationId",
+                  "value": null,
+                  "isOptional": true
+                },
+                {
+                  "name": "Type",
+                  "value": "workbook",
+                  "isOptional": true
+                },
+                {
+                  "name": "GalleryResourceType",
+                  "value": "microsoft.insights/components",
+                  "isOptional": true
+                },
+                {
+                  "name": "PinName",
+                  "value": null,
+                  "isOptional": true
+                },
+                {
+                  "name": "StepSettings",
+                  "value": "{\"version\":\"KqlItem/1.0\",\"query\":\"dependencies\\r\\n| where name == \\\"pipeline.run\\\"\\r\\n| summarize avgDuration = avg(duration), maxDuration = max(duration) by bin(timestamp, 1d)\\r\\n| extend avgDurationMinutes = avgDuration / 60000.0, maxDurationMinutes = maxDuration / 60000.0\\r\\n| project timestamp, avgDurationMinutes, maxDurationMinutes\\r\\n| order by timestamp asc\\r\\n\",\"size\":0,\"timeContext\":{\"durationMs\":86400000},\"queryType\":0,\"resourceType\":\"microsoft.insights/components\",\"visualization\":\"linechart\"}",
+                  "isOptional": true
+                },
+                {
+                  "name": "ParameterValues",
+                  "value": {},
+                  "isOptional": true
+                },
+                {
+                  "name": "Location",
+                  "isOptional": true
+                }
+              ],
+              "type": "Extension/AppInsightsExtension/PartType/PinnedNotebookQueryPart",
+              "partHeader": {
+                "title": "Pipeline Duration Trend Over Time",
+                "subtitle": ""
+              }
+            }
+          },
+          {
+            "position": {
+              "x": 0,
+              "y": 8,
+              "colSpan": 6,
+              "rowSpan": 4
+            },
+            "metadata": {
+              "inputs": [
+                {
+                  "name": "ComponentId",
+                  "value": "/subscriptions/5b2fdc00-414e-4d47-b648-915c47641491/resourceGroups/ClimateDataAnalysis/providers/microsoft.insights/components/ClimateDataAnalysis-Insights",
+                  "isOptional": true
+                },
+                {
+                  "name": "TimeContext",
+                  "value": null,
+                  "isOptional": true
+                },
+                {
+                  "name": "ResourceIds",
+                  "value": [
+                    "/subscriptions/5b2fdc00-414e-4d47-b648-915c47641491/resourceGroups/ClimateDataAnalysis/providers/microsoft.insights/components/ClimateDataAnalysis-Insights"
+                  ],
+                  "isOptional": true
+                },
+                {
+                  "name": "ConfigurationId",
+                  "value": null,
+                  "isOptional": true
+                },
+                {
+                  "name": "Type",
+                  "value": "workbook",
+                  "isOptional": true
+                },
+                {
+                  "name": "GalleryResourceType",
+                  "value": "microsoft.insights/components",
+                  "isOptional": true
+                },
+                {
+                  "name": "PinName",
+                  "value": null,
+                  "isOptional": true
+                },
+                {
+                  "name": "StepSettings",
+                  "value": "{\"version\":\"KqlItem/1.0\",\"query\":\"traces\\r\\n| where timestamp > ago(24h)\\r\\n| summarize Count=count() by severityLevel\\r\\n| project Severity=case(severityLevel==4,\\\"Info\\\",severityLevel==2,\\\"Warning\\\",\\\"Error\\\"), Count\\r\\n\",\"size\":0,\"timeContext\":{\"durationMs\":86400000},\"queryType\":0,\"resourceType\":\"microsoft.insights/components\"}",
+                  "isOptional": true
+                },
+                {
+                  "name": "ParameterValues",
+                  "value": {},
+                  "isOptional": true
+                },
+                {
+                  "name": "Location",
+                  "isOptional": true
+                }
+              ],
+              "type": "Extension/AppInsightsExtension/PartType/PinnedNotebookQueryPart",
+              "partHeader": {
+                "title": "Warning Logs",
+                "subtitle": ""
+              }
+            }
+          },
+          {
+            "position": {
+              "x": 6,
+              "y": 8,
+              "colSpan": 6,
+              "rowSpan": 4
+            },
+            "metadata": {
+              "inputs": [
+                {
+                  "name": "ComponentId",
+                  "value": "/subscriptions/5b2fdc00-414e-4d47-b648-915c47641491/resourceGroups/ClimateDataAnalysis/providers/microsoft.insights/components/ClimateDataAnalysis-Insights",
+                  "isOptional": true
+                },
+                {
+                  "name": "TimeContext",
+                  "value": null,
+                  "isOptional": true
+                },
+                {
+                  "name": "ResourceIds",
+                  "value": [
+                    "/subscriptions/5b2fdc00-414e-4d47-b648-915c47641491/resourceGroups/ClimateDataAnalysis/providers/microsoft.insights/components/ClimateDataAnalysis-Insights"
+                  ],
+                  "isOptional": true
+                },
+                {
+                  "name": "ConfigurationId",
+                  "value": null,
+                  "isOptional": true
+                },
+                {
+                  "name": "Type",
+                  "value": "workbook",
+                  "isOptional": true
+                },
+                {
+                  "name": "GalleryResourceType",
+                  "value": "microsoft.insights/components",
+                  "isOptional": true
+                },
+                {
+                  "name": "PinName",
+                  "value": null,
+                  "isOptional": true
+                },
+                {
+                  "name": "StepSettings",
+                  "value": "{\"version\":\"KqlItem/1.0\",\"query\":\"dependencies\\r\\n| where name == \\\"pipeline.run\\\" \\r\\n| summarize lastRun=max(timestamp), avgDuration=avg(duration) \\r\\n| project lastRun, avgDuration\",\"size\":0,\"timeContext\":{\"durationMs\":86400000},\"queryType\":0,\"resourceType\":\"microsoft.insights/components\",\"gridSettings\":{\"sortBy\":[{\"itemKey\":\"avgDuration\",\"sortOrder\":1}]},\"sortBy\":[{\"itemKey\":\"avgDuration\",\"sortOrder\":1}]}",
+                  "isOptional": true
+                },
+                {
+                  "name": "ParameterValues",
+                  "value": {},
+                  "isOptional": true
+                },
+                {
+                  "name": "Location",
+                  "isOptional": true
+                }
+              ],
+              "type": "Extension/AppInsightsExtension/PartType/PinnedNotebookQueryPart",
+              "partHeader": {
+                "title": "Last Run and Average Pipeline Run",
+                "subtitle": ""
+              }
+            }
+          },
+          {
+            "position": {
+              "x": 12,
+              "y": 8,
+              "colSpan": 6,
+              "rowSpan": 4
+            },
+            "metadata": {
+              "inputs": [
+                {
+                  "name": "ComponentId",
+                  "value": "/subscriptions/5b2fdc00-414e-4d47-b648-915c47641491/resourceGroups/ClimateDataAnalysis/providers/microsoft.insights/components/ClimateDataAnalysis-Insights",
+                  "isOptional": true
+                },
+                {
+                  "name": "TimeContext",
+                  "value": null,
+                  "isOptional": true
+                },
+                {
+                  "name": "ResourceIds",
+                  "value": [
+                    "/subscriptions/5b2fdc00-414e-4d47-b648-915c47641491/resourceGroups/ClimateDataAnalysis/providers/microsoft.insights/components/ClimateDataAnalysis-Insights"
+                  ],
+                  "isOptional": true
+                },
+                {
+                  "name": "ConfigurationId",
+                  "value": null,
+                  "isOptional": true
+                },
+                {
+                  "name": "Type",
+                  "value": "workbook",
+                  "isOptional": true
+                },
+                {
+                  "name": "GalleryResourceType",
+                  "value": "microsoft.insights/components",
+                  "isOptional": true
+                },
+                {
+                  "name": "PinName",
+                  "value": null,
+                  "isOptional": true
+                },
+                {
+                  "name": "StepSettings",
+                  "value": "{\"version\":\"KqlItem/1.0\",\"query\":\"exceptions | where timestamp > ago(24h) | summarize Count=count(), LastFailure=max(timestamp)\",\"size\":0,\"timeContext\":{\"durationMs\":86400000},\"queryType\":0,\"resourceType\":\"microsoft.insights/components\"}",
+                  "isOptional": true
+                },
+                {
+                  "name": "ParameterValues",
+                  "value": {},
+                  "isOptional": true
+                },
+                {
+                  "name": "Location",
+                  "isOptional": true
+                }
+              ],
+              "type": "Extension/AppInsightsExtension/PartType/PinnedNotebookQueryPart",
+              "partHeader": {
+                "title": "Failed spans/errors",
+                "subtitle": ""
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "metadata": {
+      "model": {
+        "timeRange": {
+          "value": {
+            "relative": {
+              "duration": 24,
+              "timeUnit": 1
+            }
+          },
+          "type": "MsPortalFx.Composition.Configuration.ValueTypes.TimeRange"
+        },
+        "filterLocale": {
+          "value": "en-us"
+        },
+        "filters": {
+          "value": {
+            "MsPortalFx_TimeRange": {
+              "model": {
+                "format": "utc",
+                "granularity": "auto",
+                "relative": "24h"
+              },
+              "displayCache": {
+                "name": "UTC Time",
+                "value": "Past 24 hours"
+              },
+              "filteredPartIds": [
+                "StartboardPart-AppMapGalPt-592d92f6-d17c-4a6f-b42f-cf0ea53e9a5b",
+                "StartboardPart-PinnedNotebookQueryPart-592d92f6-d17c-4a6f-b42f-cf0ea53e9a5f",
+                "StartboardPart-PinnedNotebookQueryPart-592d92f6-d17c-4a6f-b42f-cf0ea53e9a69",
+                "StartboardPart-PinnedNotebookQueryPart-592d92f6-d17c-4a6f-b42f-cf0ea53e9a63",
+                "StartboardPart-PinnedNotebookQueryPart-592d92f6-d17c-4a6f-b42f-cf0ea53e9a65",
+                "StartboardPart-PinnedNotebookQueryPart-592d92f6-d17c-4a6f-b42f-cf0ea53e9a67"
+              ]
+            }
+          }
+        }
+      }
+    }
+  },
+  "name": "Climate Data Analysis Dashboard",
+  "type": "Microsoft.Portal/dashboards",
+  "location": "INSERT LOCATION",
+  "tags": {
+    "hidden-title": "Climate Data Analysis Dashboard"
+  },
+  "apiVersion": "2022-12-01-preview"
+}
