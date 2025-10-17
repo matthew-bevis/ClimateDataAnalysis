@@ -25,5 +25,4 @@ pytest-cov==5.0.0
 freezegun==1.5.1
 
 # optional
-opencensus-ext-azure; extra == "azure"
-azure.monitor.opentelemetry
+applicationinsights==0.11.10
